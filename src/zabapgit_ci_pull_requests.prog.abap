@@ -80,10 +80,9 @@ CLASS lcl_alv_view DEFINITION.
 
   PRIVATE SECTION.
     DATA:
-      mo_collector   TYPE REF TO lcl_collector,
-      mo_alv         TYPE REF TO cl_salv_table,
-      mo_table_descr TYPE REF TO cl_abap_tabledescr,
-      mr_result      TYPE REF TO data.
+      mo_collector TYPE REF TO lcl_collector,
+      mo_alv       TYPE REF TO cl_salv_table,
+      mr_result    TYPE REF TO data.
 
     METHODS:
       create_table
@@ -104,9 +103,9 @@ CLASS lcl_alv_view IMPLEMENTATION.
   METHOD constructor.
 
     mo_collector = io_collector.
-    mo_table_descr = create_table( ).
+    DATA(lo_table_descr) = create_table( ).
 
-    CREATE DATA mr_result TYPE HANDLE mo_table_descr.
+    CREATE DATA mr_result TYPE HANDLE lo_table_descr.
 
   ENDMETHOD.
 
@@ -128,6 +127,27 @@ CLASS lcl_alv_view IMPLEMENTATION.
 
         SET HANDLER on_double_click FOR lo_event.
 
+        DATA(lo_columns) = mo_alv->get_columns( ).
+
+        lo_columns->set_optimize( ).
+
+        DATA(lt_components) =
+          CAST cl_abap_structdescr(
+            CAST cl_abap_tabledescr( cl_abap_tabledescr=>describe_by_data(
+              mo_collector->mt_result
+            )
+          )->get_table_line_type( )
+        )->components.
+
+        LOOP AT lt_components ASSIGNING FIELD-SYMBOL(<ls_component>).
+
+          DATA(lo_column) = lo_columns->get_column( <ls_component>-name ).
+          lo_column->set_short_text(  |{ <ls_component>-name }| ).
+          lo_column->set_medium_text( |{ <ls_component>-name }| ).
+          lo_column->set_long_text(   |{ <ls_component>-name }| ).
+
+        ENDLOOP.
+
         mo_alv->display( ).
 
       CATCH cx_salv_error INTO DATA(lx_error).
@@ -139,25 +159,30 @@ CLASS lcl_alv_view IMPLEMENTATION.
 
   METHOD create_table.
 
-    DATA(lt_components) =
+    DATA(lo_struct_descr) =
       CAST cl_abap_structdescr(
-        CAST cl_abap_tabledescr( cl_abap_tabledescr=>describe_by_data( mo_collector->mt_result )
-        )->get_table_line_type( )
-      )->get_components( ).
+        CAST cl_abap_tabledescr( cl_abap_tabledescr=>describe_by_name( 'LCL_COLLECTOR=>TTY_RESULT' )
+      )->get_table_line_type( ) ).
 
-    LOOP AT lt_components ASSIGNING FIELD-SYMBOL(<ls_component>).
+    DATA(lt_components) = lo_struct_descr->get_components( ).
 
-      DATA(lv_type) = cl_abap_datadescr=>get_data_type_kind( <ls_component>-type ).
+    ASSIGN lt_components[ as_include = abap_true ] TO FIELD-SYMBOL(<ls_include>).
+    ASSERT sy-subrc = 0.
 
-      IF lv_type = cl_abap_datadescr=>typekind_struct1
-      OR lv_type = cl_abap_datadescr=>typekind_struct2
-      OR lv_type = cl_abap_datadescr=>typekind_table.
+    DATA(lt_include_components) = CAST cl_abap_structdescr( <ls_include>-type )->get_components( ).
+
+    LOOP AT lt_include_components ASSIGNING FIELD-SYMBOL(<ls_component>).
+
+      IF <ls_component>-type IS INSTANCE OF cl_abap_tabledescr
+      OR <ls_component>-type IS INSTANCE OF cl_abap_structdescr.
 
         <ls_component>-type ?= cl_abap_datadescr=>describe_by_name( |ICON_D| ).
 
       ENDIF.
 
     ENDLOOP.
+
+    <ls_include>-type = cl_abap_structdescr=>create( lt_include_components ).
 
     ro_table_descr = cl_abap_tabledescr=>create( cl_abap_structdescr=>create( lt_components ) ).
 
@@ -171,7 +196,13 @@ CLASS lcl_alv_view IMPLEMENTATION.
     ASSIGN mr_result->* TO <lt_result>.
     ASSERT sy-subrc = 0.
 
-    DATA(lt_components) = CAST cl_abap_structdescr( mo_table_descr->get_table_line_type( ) )->get_components( ).
+    DATA(lt_components) =
+      CAST cl_abap_structdescr(
+        CAST cl_abap_tabledescr( cl_abap_tabledescr=>describe_by_data(
+          mo_collector->mt_result
+        )
+      )->get_table_line_type( )
+    )->components.
 
     LOOP AT mo_collector->mt_result ASSIGNING FIELD-SYMBOL(<ls_collector_result>).
 
@@ -190,11 +221,21 @@ CLASS lcl_alv_view IMPLEMENTATION.
                TO FIELD-SYMBOL(<right>).
         ASSERT sy-subrc = 0.
 
-        IF <ls_component>-type->get_relative_name( ) NS 'ICON_D'.
-          <left> = <right>.
-        ELSE.
-          <left> = icon_view_table.
-        ENDIF.
+        CASE <ls_component>-type_kind.
+          WHEN  cl_abap_datadescr=>typekind_struct1
+            OR cl_abap_datadescr=>typekind_struct2.
+
+            <left> = icon_structure.
+
+          WHEN cl_abap_datadescr=>typekind_table.
+
+            <left> = icon_view_table.
+
+          WHEN OTHERS.
+
+            <left> = <right>.
+
+        ENDCASE.
 
       ENDLOOP.
 
@@ -205,25 +246,41 @@ CLASS lcl_alv_view IMPLEMENTATION.
 
   METHOD on_double_click.
 
-    FIELD-SYMBOLS: <lt_result> TYPE INDEX TABLE.
-
-    ASSIGN mr_result->* TO <lt_result>.
-    ASSERT sy-subrc = 0.
-
-    ASSIGN <lt_result>[ row ] TO FIELD-SYMBOL(<ls_line>).
+    ASSIGN mo_collector->mt_result[ row ] TO FIELD-SYMBOL(<ls_result>).
     ASSERT sy-subrc = 0.
 
     ASSIGN COMPONENT column
-           OF STRUCTURE <ls_line>
+           OF STRUCTURE <ls_result>
            TO FIELD-SYMBOL(<value>).
     ASSERT sy-subrc = 0.
 
     CASE column.
-      WHEN 'TEST_CASES'
-        OR 'REPO_RESULT_LIST'
+      WHEN 'REPO_RESULT_LIST'
         OR 'GENERIC_RESULT_LIST'.
 
         cl_demo_output=>display( <value> ).
+
+      WHEN 'STATISTICS'.
+
+        ASSIGN COMPONENT 'FINISH_TIMESTAMP'
+               OF STRUCTURE <value>
+               TO FIELD-SYMBOL(<value2>).
+        ASSERT sy-subrc = 0.
+        cl_demo_output=>write( <value2> ).
+
+        ASSIGN COMPONENT 'DURATION_IN_SECONDS'
+               OF STRUCTURE <value>
+               TO <value2>.
+        ASSERT sy-subrc = 0.
+        cl_demo_output=>write( <value2> ).
+
+        ASSIGN COMPONENT 'TEST_CASES'
+               OF STRUCTURE <value>
+               TO <value2>.
+        ASSERT sy-subrc = 0.
+        cl_demo_output=>write( <value2> ).
+
+        cl_demo_output=>display(  ).
 
     ENDCASE.
 
