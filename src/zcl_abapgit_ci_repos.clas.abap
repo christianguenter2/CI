@@ -4,6 +4,13 @@ CLASS zcl_abapgit_ci_repos DEFINITION
 
   PUBLIC SECTION.
     CLASS-METHODS:
+      update_abapgit_repo_rfc
+        IMPORTING
+          iv_branch_name TYPE string
+          iv_url         TYPE zif_abapgit_persistence=>ty_repo-url OPTIONAL
+        RAISING
+          zcx_abapgit_exception,
+
       update_abapgit_repo
         IMPORTING
           iv_branch_name TYPE string
@@ -174,6 +181,41 @@ CLASS zcl_abapgit_ci_repos IMPLEMENTATION.
       zcx_abapgit_exception=>raise( |Syntax error in repo { iv_package } |
                                  && |object { <ls_error>-objtype } { <ls_error>-text } |
                                  && |{ <ls_error>-text }| ).
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD update_abapgit_repo_rfc.
+
+    DATA: lv_message TYPE string,
+          lv_rc      TYPE sysubrc.
+
+    CALL FUNCTION 'Z_ABAPGIT_CI_UPDATE_ABAPGIT'
+      DESTINATION 'NONE'
+      EXPORTING
+        iv_branch_name        = iv_branch_name
+        iv_url                = iv_url
+      IMPORTING
+        ev_message            = lv_message
+        ev_rc                 = lv_rc
+      EXCEPTIONS
+        communication_failure = 1
+        system_failure        = 2
+        OTHERS                = 3.
+
+    DATA(lv_subrc) = sy-subrc.
+
+    CALL FUNCTION 'RFC_CONNECTION_CLOSE'
+      EXPORTING
+        destination          = 'NONE'
+      EXCEPTIONS
+        destination_not_open = 1
+        OTHERS               = 2.
+
+    IF lv_subrc <> 0.
+      zcx_abapgit_exception=>raise( |Error in Z_ABAPGIT_CI_UPDATE_ABAPGIT_REPO. Subrc = { lv_subrc }| ).
+    ELSEIF lv_rc > 0.
+      zcx_abapgit_exception=>raise( | { lv_message }. RC = { lv_rc } | ).
     ENDIF.
 
   ENDMETHOD.

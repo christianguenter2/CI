@@ -318,8 +318,7 @@ CLASS lcl_controller IMPLEMENTATION.
           iv_url = <ls_pull_request>-head-repo-git_url ).
 
       TRY.
-
-          zcl_abapgit_ci_repos=>update_abapgit_repo(
+          zcl_abapgit_ci_repos=>update_abapgit_repo_rfc(
               iv_branch_name = <ls_pull_request>-head-ref
               iv_url         = <ls_pull_request>-head-repo-git_url ).
 
