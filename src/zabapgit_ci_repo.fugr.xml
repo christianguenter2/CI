@@ -28,6 +28,7 @@
     </item>
     <item>
      <FUNCNAME>Z_ABAPGIT_CI_UPDATE_ABAPGIT</FUNCNAME>
+     <REMOTE_CALL>R</REMOTE_CALL>
      <SHORT_TEXT>abapGit CI: Update abapGit</SHORT_TEXT>
      <IMPORT>
       <RSIMP>
@@ -37,7 +38,7 @@
       <RSIMP>
        <PARAMETER>IV_URL</PARAMETER>
        <OPTIONAL>X</OPTIONAL>
-       <TYP>ZIF_ABAPGIT_PERSISTENCE=&gt;TY_REPO-URL</TYP>
+       <TYP>STRING</TYP>
       </RSIMP>
      </IMPORT>
      <EXPORT>
