@@ -5,6 +5,9 @@ CLASS zcl_abapgit_ci_repos DEFINITION
   PUBLIC SECTION.
     CLASS-METHODS:
       update_abapgit_repo
+        IMPORTING
+          iv_branch_name TYPE string
+          iv_url         TYPE zif_abapgit_persistence=>ty_repo-url OPTIONAL
         RAISING
           zcx_abapgit_exception,
 
@@ -25,6 +28,7 @@ CLASS zcl_abapgit_ci_repos DEFINITION
         IMPORTING
           iv_repo_name   TYPE string
           iv_branch_name TYPE string
+          iv_url         TYPE zif_abapgit_persistence=>ty_repo-url OPTIONAL
         RAISING
           zcx_abapgit_exception,
 
@@ -112,7 +116,8 @@ CLASS zcl_abapgit_ci_repos IMPLEMENTATION.
 
     update_repo(
         iv_repo_name   = 'abapGit'
-        iv_branch_name = 'master' ).
+        iv_url         = iv_url
+        iv_branch_name = iv_branch_name ).
 
   ENDMETHOD.
 
@@ -143,6 +148,9 @@ CLASS zcl_abapgit_ci_repos IMPLEMENTATION.
     ENDIF.
 
     lo_repo->set_branch_name( |refs/heads/{ iv_branch_name }| ).
+    IF iv_url IS NOT INITIAL.
+      lo_repo->set_url( iv_url ).
+    ENDIF.
 
     DATA(ls_checks) = lo_repo->deserialize_checks( ).
 

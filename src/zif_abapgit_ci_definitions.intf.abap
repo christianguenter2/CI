@@ -3,6 +3,18 @@ INTERFACE zif_abapgit_ci_definitions
 
 
   TYPES:
+    BEGIN OF ty_pull,
+      BEGIN OF head,
+        ref TYPE string,
+        BEGIN OF repo,
+          git_url TYPE string,
+        END OF repo,
+      END OF head,
+    END OF ty_pull,
+    tty_pull_requests TYPE STANDARD TABLE OF ty_pull
+                           WITH NON-UNIQUE DEFAULT KEY.
+
+  TYPES:
     BEGIN OF ty_repo,
       name      TYPE string,
       clone_url TYPE string,
