@@ -9,9 +9,12 @@ FUNCTION Z_ABAPGIT_CI_UPDATE_ABAPGIT.
 *"     VALUE(EV_RC) TYPE  SYSUBRC
 *"----------------------------------------------------------------------
 
+  CLEAR:
+    ev_message,
+    ev_rc.
 
   TRY.
-      zcl_abapgit_ci_repos=>update_abapgit_repo_rfc(
+      zcl_abapgit_ci_repos=>update_abapgit_repo(
           iv_branch_name = iv_branch_name
           iv_url         = iv_url ).
 
