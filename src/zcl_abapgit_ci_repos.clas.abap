@@ -23,7 +23,8 @@ CLASS zcl_abapgit_ci_repos DEFINITION
     CLASS-METHODS:
       update_repo
         IMPORTING
-          iv_repo_name TYPE string
+          iv_repo_name   TYPE string
+          iv_branch_name TYPE string
         RAISING
           zcx_abapgit_exception,
 
@@ -109,13 +110,17 @@ CLASS zcl_abapgit_ci_repos IMPLEMENTATION.
 
   METHOD update_abapgit_repo.
 
-    update_repo( 'abapGit' ).
+    update_repo(
+        iv_repo_name   = 'abapGit'
+        iv_branch_name = 'master' ).
 
   ENDMETHOD.
 
   METHOD update_abapgit_ci_repo.
 
-    update_repo( 'CI' ).
+    update_repo(
+        iv_repo_name   = 'CI'
+        iv_branch_name = 'master' ).
 
   ENDMETHOD.
 
@@ -137,7 +142,7 @@ CLASS zcl_abapgit_ci_repos IMPLEMENTATION.
       zcx_abapgit_exception=>raise( |Couldn't find { iv_repo_name } repo| ).
     ENDIF.
 
-    lo_repo->set_branch_name( 'refs/heads/master' ).
+    lo_repo->set_branch_name( |refs/heads/{ iv_branch_name }| ).
 
     DATA(ls_checks) = lo_repo->deserialize_checks( ).
 
